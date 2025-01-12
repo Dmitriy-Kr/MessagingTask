@@ -35,11 +35,11 @@ spring:
           predicates:
             - Path=/trainee/**,/trainer/**,/training/**,/training-type/**,/user/**
           filters:
+            - JwtFilter
             - name: CircuitBreaker
               args:
                 name: appCircuitBreaker
                 fallbackUri: forward:/fallback
-            - JwtFilter
 
         - id: basic_route_login
           uri: lb://basic
@@ -56,11 +56,11 @@ spring:
           predicates:
             - Path=/workload/**
           filters:
+            - JwtFilter
             - name: CircuitBreaker
               args:
                 name: appCircuitBreaker
                 fallbackUri: forward:/fallback
-            - JwtFilter
 
 application:
   security:

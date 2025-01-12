@@ -119,17 +119,13 @@ public class TrainerController {
 
     @GetMapping("/workload")
     @ResponseBody
-//    @CircuitBreaker(name = "randomActivity", fallbackMethod = "fallback")
     @Operation(summary = "Get trainer workload")
     public String getWorkload(@RequestParam("username") String username,
                            @RequestParam("year") Integer year,
-                           @RequestParam("month") Integer month) throws ServiceException, NoResourcePresentException, InvalidDataException {
+                           @RequestParam("month") Integer month) {
 
         return  workloadClient.getDuration(username, year, month);
 
     }
 
-//    public String fallback(Throwable throwable) {
-//        return "The service is temporarily unavailable.";
-//    }
 }

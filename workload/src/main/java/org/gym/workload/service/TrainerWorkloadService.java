@@ -5,6 +5,7 @@ import org.gym.workload.entity.Month;
 import org.gym.workload.entity.Trainer;
 import org.gym.workload.entity.Year;
 import org.gym.workload.exception.ServiceException;
+import org.gym.workload.message.WorkloadMessage;
 import org.gym.workload.repository.TrainerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +44,23 @@ public class TrainerWorkloadService {
         }
     }
 
+    @Transactional
+    public void process(WorkloadMessage message) throws ServiceException {
+        try {
+            switch (message.getActionType()) {
+                case ADD:
+                    add(message);
+                    break;
+                case DELETE:
+                    delete(message);
+            }
+
+        } catch (Exception ex) {
+            logger.error("Fail to process message");
+            throw new ServiceException("Fail to process message", ex);
+        }
+    }
+
     public int getDuration(String username, Integer year, Integer month) {
         Optional<Trainer> trainer = repository.findByUsername(username);
 
@@ -53,6 +71,30 @@ public class TrainerWorkloadService {
                 .filter(m -> m.getMonthNumber() == month)
                 .findFirst().orElse(new Month()).getTrainingSummaryDuration()).orElse(-100);
         // need throwing exception here
+    }
+
+    private void add(WorkloadMessage message) {
+        WorkloadRequest workloadRequest = convertMessageToWorkloadRequest(message);
+
+        add(workloadRequest);
+    }
+
+    private void delete(WorkloadMessage message) {
+        WorkloadRequest workloadRequest = convertMessageToWorkloadRequest(message);
+        delete(workloadRequest);
+    }
+
+    private WorkloadRequest convertMessageToWorkloadRequest(WorkloadMessage message) {
+        WorkloadRequest workloadRequest = new WorkloadRequest();
+
+        workloadRequest.setActionType(WorkloadRequest.ActionType.valueOf(message.getActionType().name()));
+        workloadRequest.setTrainerUsername(message.getTrainerUsername());
+        workloadRequest.setTrainerFirstName(message.getTrainerFirstName());
+        workloadRequest.setTrainerLastName(message.getTrainerLastName());
+        workloadRequest.setActive(message.isActive());
+        workloadRequest.setTrainingDuration(message.getTrainingDuration());
+        workloadRequest.setTrainingDate(message.getTrainingDate());
+        return workloadRequest;
     }
 
     private void add(WorkloadRequest request) {

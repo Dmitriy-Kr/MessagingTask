@@ -3,10 +3,13 @@ package org.gym.basic.service;
 import org.gym.basic.dto.TrainingDto;
 import org.gym.basic.entity.Training;
 import org.gym.basic.feignclient.WorkloadClient;
+import org.gym.basic.message.WorkloadMessage;
 import org.gym.basic.repository.TrainingRepository;
 import org.gym.workload.dto.WorkloadRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jms.JmsException;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,14 +29,17 @@ public class TrainingService {
 
     private final WorkloadClient workloadClient;
 
-    private static final Logger logger = LoggerFactory.getLogger( TrainingService.class);
+    private final JmsTemplate jmsTemplate;
 
-    public TrainingService(WorkloadClient workloadClient, TrainingTypeService trainingTypeService, TrainerService trainerService, TraineeService traineeService, TrainingRepository trainingRepository) {
+    private static final Logger logger = LoggerFactory.getLogger(TrainingService.class);
+
+    public TrainingService(WorkloadClient workloadClient, TrainingTypeService trainingTypeService, TrainerService trainerService, TraineeService traineeService, TrainingRepository trainingRepository, JmsTemplate jmsTemplate) {
         this.workloadClient = workloadClient;
         this.trainingTypeService = trainingTypeService;
         this.trainerService = trainerService;
         this.traineeService = traineeService;
         this.trainingRepository = trainingRepository;
+        this.jmsTemplate = jmsTemplate;
     }
 
     @Transactional
@@ -57,10 +63,12 @@ public class TrainingService {
             training.setTrainingDay(Date.valueOf(LocalDate.parse(trainingDto.getTrainingDay())));
             training.setTrainingDuration(trainingDto.getTrainingDuration());
 
-            String status = workloadClient.process(createRequest(training, WorkloadRequest.ActionType.ADD));
+            WorkloadMessage workloadMessage = WorkloadMessage.createFromTraining(training, WorkloadMessage.ActionType.ADD);
 
-            if(!"successful".equals(status)){
-                throw new RuntimeException(status);
+            try {
+                jmsTemplate.convertAndSend("workload-queue", workloadMessage);
+            } catch (JmsException ex) {
+                throw new ServiceException("Fail to send message to Queue", ex);
             }
 
             return trainingRepository.save(training);
@@ -81,12 +89,12 @@ public class TrainingService {
         Training training = trainingRepository.findById(id)
                 .orElseThrow(() -> new ServiceException("Fail to find training. No such training present in DB"));
 
-        WorkloadRequest workloadRequest = createRequest(training, WorkloadRequest.ActionType.DELETE);
+        WorkloadMessage workloadMessage = WorkloadMessage.createFromTraining(training, WorkloadMessage.ActionType.DELETE);
 
-        String status = workloadClient.process(workloadRequest);
-
-        if(!"successful".equals(status)){
-            throw new ServiceException(status);
+        try {
+            jmsTemplate.convertAndSend("workload-queue", workloadMessage);
+        } catch (JmsException ex) {
+            throw new ServiceException("Fail to send message to Queue", ex);
         }
 
         trainingRepository.deleteById(id);
