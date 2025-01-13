@@ -50,6 +50,9 @@ spring:
               args:
                 name: appCircuitBreaker
                 fallbackUri: forward:/fallback
+                statusCodes:
+                  - 500
+                  - "NOT_FOUND"
 ## workload module route
         - id: workload_route
           uri: lb://workload
@@ -72,7 +75,7 @@ resilience4j.circuitbreaker:
     appCircuitBreaker:
       registerHealthIndicator: true
       slidingWindowSize: 10
-      failureRateThreshold: 50
-      waitDurationInOpenState: 10s
+      failureRateThreshold: 70
+      waitDurationInOpenState: 5s
       permittedNumberOfCallsInHalfOpenState: 3
       minimumNumberOfCalls: 5

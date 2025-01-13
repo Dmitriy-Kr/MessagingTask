@@ -4,6 +4,8 @@
 # Log files
 *.log
 log/
+log-basic/
+log-workload/
 
 # Allow
 !chat.log
