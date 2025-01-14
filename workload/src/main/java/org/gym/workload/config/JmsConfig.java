@@ -1,31 +1,54 @@
 package org.gym.workload.config;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.hibernate.validator.HibernateValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.annotation.EnableJms;
+import org.springframework.jms.annotation.JmsListenerConfigurer;
 import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
+import org.springframework.jms.config.JmsListenerEndpointRegistrar;
 import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.support.converter.MappingJackson2MessageConverter;
 import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.MessageType;
+import org.springframework.messaging.handler.annotation.support.DefaultMessageHandlerMethodFactory;
+import org.springframework.validation.Validator;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
 @EnableJms
-public class JmsConfig {
+public class JmsConfig implements JmsListenerConfigurer {
+    @Override
+    public void configureJmsListeners(JmsListenerEndpointRegistrar registrar) {
+        registrar.setMessageHandlerMethodFactory(myHandlerMethodFactory());
+    }
+    @Bean
+    public DefaultMessageHandlerMethodFactory myHandlerMethodFactory() {
+        DefaultMessageHandlerMethodFactory factory = new DefaultMessageHandlerMethodFactory();
+        factory.setValidator(validatorFactory());
+        return factory;
+    }
+
+    @Bean
+    public Validator validatorFactory(){
+        LocalValidatorFactoryBean factory = new LocalValidatorFactoryBean();
+        factory.setProviderClass(HibernateValidator.class);
+        return factory;
+    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JmsConfig.class);
 
     @Value("${spring.activemq.broker-url}")
     private String brokerUrl;
 
-    @Value("${spring.activemq.username}")
+    @Value("${spring.activemq.user}")
     private String user;
 
     @Value("${spring.activemq.password}")

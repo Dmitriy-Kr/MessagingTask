@@ -7,6 +7,7 @@ import org.gym.basic.entity.Training;
 import org.gym.basic.entity.User;
 import org.gym.basic.feignclient.WorkloadClient;
 import org.gym.basic.jwtbearerauth.JwtTokenService;
+import org.gym.basic.message.WorkloadMessage;
 import org.gym.basic.repository.TraineeRepository;
 import org.gym.basic.repository.TrainerRepository;
 import org.gym.basic.repository.TrainingRepository;
@@ -14,6 +15,8 @@ import org.gym.basic.repository.UserRepository;
 import org.gym.workload.dto.WorkloadRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jms.JmsException;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,10 +43,11 @@ public class TraineeService {
     private final JwtTokenService jwtTokenService;
     private final WorkloadClient workloadClient;
     private final TrainingRepository trainingRepository;
+    private final JmsTemplate jmsTemplate;
 
     private static final Logger logger = LoggerFactory.getLogger(TraineeService.class);
 
-    public TraineeService(TraineeRepository traineeRepository, UserRepository userRepository, TrainerRepository trainerRepository, PasswordEncoder passwordEncoder, JwtTokenService jwtTokenService, WorkloadClient workloadClient, TrainingRepository trainingRepository) {
+    public TraineeService(TraineeRepository traineeRepository, UserRepository userRepository, TrainerRepository trainerRepository, PasswordEncoder passwordEncoder, JwtTokenService jwtTokenService, WorkloadClient workloadClient, TrainingRepository trainingRepository, JmsTemplate jmsTemplate) {
         this.traineeRepository = traineeRepository;
         this.userRepository = userRepository;
         this.trainerRepository = trainerRepository;
@@ -51,6 +55,7 @@ public class TraineeService {
         this.jwtTokenService = jwtTokenService;
         this.workloadClient = workloadClient;
         this.trainingRepository = trainingRepository;
+        this.jmsTemplate = jmsTemplate;
     }
 
     @Transactional
@@ -160,12 +165,12 @@ public class TraineeService {
                     .toList();
 
             for (Training training : trainingList) {
-                WorkloadRequest workloadRequest = createRequest(training, WorkloadRequest.ActionType.DELETE);
+                WorkloadMessage workloadMessage = WorkloadMessage.createFromTraining(training, WorkloadMessage.ActionType.DELETE);
 
-                String status = workloadClient.process(workloadRequest);
-
-                if (!"successful".equals(status)) {
-                    throw new RuntimeException(status);
+                try {
+                    jmsTemplate.convertAndSend("workload-queue", workloadMessage);
+                } catch (JmsException ex) {
+                    throw new ServiceException("Fail to send message to Queue", ex);
                 }
 
                 trainingRepository.deleteById(training.getId());

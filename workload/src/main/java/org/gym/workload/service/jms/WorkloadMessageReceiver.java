@@ -1,5 +1,6 @@
 package org.gym.workload.service.jms;
 
+import jakarta.validation.Valid;
 import org.gym.workload.exception.ServiceException;
 import org.gym.workload.message.WorkloadMessage;
 import org.gym.workload.service.TrainerWorkloadService;
@@ -15,7 +16,7 @@ public class WorkloadMessageReceiver {
     }
 
     @JmsListener(destination = "workload-queue")
-    public void receiveMessage(WorkloadMessage message) throws ServiceException {
+    public void receiveMessage(@Valid WorkloadMessage message) throws ServiceException {
         service.process(message);
     }
 }

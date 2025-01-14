@@ -1,20 +1,29 @@
 package org.gym.workload.message;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.sql.Date;
 
 public class WorkloadMessage {
+    @NotBlank(message = "Username is mandatory")
     private String trainerUsername;
 
+    @NotBlank(message = "Firstname is mandatory")
     private String trainerFirstName;
 
+    @NotBlank(message = "Lastname is mandatory")
     private String trainerLastName;
 
     private boolean active;
 
+    @NotNull
     private Date trainingDate;
 
+    @NotNull
     private Integer trainingDuration;
 
+    @NotNull// Duration in hours
     private ActionType actionType;
 
     // Enum for action type
