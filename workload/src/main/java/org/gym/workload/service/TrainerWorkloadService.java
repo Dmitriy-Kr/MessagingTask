@@ -44,7 +44,6 @@ public class TrainerWorkloadService {
         }
     }
 
-    @Transactional
     public void process(WorkloadMessage message) throws ServiceException {
         try {
             switch (message.getActionType()) {
